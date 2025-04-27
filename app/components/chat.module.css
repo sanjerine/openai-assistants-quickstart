@@ -94,3 +94,48 @@
   color: #b8b8b8;
   margin-right: 8px;
 }
+
+.loadingMessage {
+  display: flex;
+  justify-content: flex-start;
+  margin: 12px 0;
+  padding: 10px 15px;
+  background-color: #f1f1f1;
+  border-radius: 10px;
+  max-width: 80%;
+  align-self: flex-start;
+}
+
+.loadingDots {
+  display: flex;
+  align-items: center;
+}
+
+.loadingDots span {
+  width: 8px;
+  height: 8px;
+  margin: 0 3px;
+  background-color: #666;
+  border-radius: 50%;
+  display: inline-block;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loadingDots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loadingDots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
