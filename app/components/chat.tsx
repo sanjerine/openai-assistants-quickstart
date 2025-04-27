@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import styles from "./chat.module.css";
 import { AssistantStream } from "openai/lib/AssistantStream";
 import Markdown from "react-markdown";
 // @ts-expect-error - no types for this yet
@@ -51,12 +50,16 @@ const getFileNameFromId = (fileId) => {
 };
 
 const UserMessage = ({ text }: { text: string }) => {
-  return <div className={styles.userMessage}>{text}</div>;
+  return (
+    <div className="self-end text-dark bg-primary font-medium my-2 p-2 px-4 rounded-2xl max-w-[80%] break-words">
+      {text}
+    </div>
+  );
 };
 
 const AssistantMessage = ({ text }: { text: string }) => {
   return (
-    <div className={styles.assistantMessage}>
+    <div className="bg-gray-100 text-dark my-2 p-2 px-4 rounded-2xl max-w-[80%] self-start break-words">
       <Markdown
         components={{
           a: ({ node, ...props }) => {
@@ -80,17 +83,24 @@ const AssistantMessage = ({ text }: { text: string }) => {
                   href={`/files/${fileName}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={styles.fileDownloadLink}
+                  className="inline-flex items-center p-2 my-2 bg-gray-100 border border-gray-200 rounded-lg text-dark hover:bg-amber-50 hover:border-primary transition-all duration-200 shadow-sm max-w-full"
                   title={fileName}
                 >
-                  <div className={styles.fileIcon}>📄</div>
-                  <div className={styles.fileName}>{displayName}</div>
+                  <div className="text-lg mr-2 flex-shrink-0 text-primary">
+                    📄
+                  </div>
+                  <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[0.95em]">
+                    {displayName}
+                  </div>
                 </a>
               );
             }
             // Regular link
             return <a {...props} target="_blank" rel="noopener noreferrer" />;
           },
+          img: (props) => (
+            <img {...props} className="max-w-full my-2 rounded-lg" />
+          ),
         }}
       >
         {text}
@@ -101,10 +111,10 @@ const AssistantMessage = ({ text }: { text: string }) => {
 
 const CodeMessage = ({ text }: { text: string }) => {
   return (
-    <div className={styles.codeMessage}>
+    <div className="p-2 px-4 bg-gray-200 counter-reset-[line] text-dark my-2 rounded-2xl max-w-[80%] self-start">
       {text.split("\n").map((line, index) => (
-        <div key={index}>
-          <span>{`${index + 1}. `}</span>
+        <div key={index} className="mt-1">
+          <span className="text-gray-400 mr-2">{`${index + 1}. `}</span>
           {line}
         </div>
       ))}
@@ -351,42 +361,42 @@ const Chat = ({
   };
 
   return (
-    <div className={styles.chatContainer}>
-      <div className={styles.messages}>
-        {messages.map((msg, index) => (
-          <Message key={index} role={msg.role} text={msg.text} />
+    <div className="flex flex-col-reverse h-full w-full overflow-hidden">
+      <form
+        onSubmit={handleSubmit}
+        className="flex w-full p-2 pb-5 order-1 bg-white border-t border-gray-200 z-10 flex-shrink-0"
+      >
+        <input
+          type="text"
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          disabled={inputDisabled}
+          placeholder="Type your message..."
+          className="flex-grow py-4 px-6 mr-2 rounded-full border-2 border-transparent focus:outline-none focus:border-primary focus:bg-white bg-gray-100 text-black"
+        />
+        <button
+          type="submit"
+          disabled={inputDisabled}
+          className="py-2 px-6 bg-primary text-dark border-none text-base rounded-full font-semibold hover:bg-amber-500 disabled:bg-gray-300"
+        >
+          Send
+        </button>
+      </form>
+      <div className="flex-grow overflow-y-auto p-2 flex flex-col order-2 whitespace-pre-wrap h-[calc(100%-90px)]">
+        {messages.map((message, index) => (
+          <Message key={index} role={message.role} text={message.text} />
         ))}
         {isLoading && (
-          <div className={styles.loadingMessage}>
-            <div className={styles.loadingDots}>
-              <span></span>
-              <span></span>
-              <span></span>
+          <div className="flex justify-start my-3 p-2 px-4 bg-gray-100 rounded-2xl max-w-[80%] self-start">
+            <div className="flex items-center">
+              <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out_-0.32s]"></span>
+              <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out_-0.16s]"></span>
+              <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out]"></span>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
-      <form
-        onSubmit={handleSubmit}
-        className={`${styles.inputForm} ${styles.clearfix}`}
-      >
-        <input
-          type="text"
-          className={styles.input}
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          placeholder="Enter your question"
-          disabled={inputDisabled}
-        />
-        <button
-          type="submit"
-          className={styles.button}
-          disabled={inputDisabled}
-        >
-          {isLoading ? "Loading..." : "Send"}
-        </button>
-      </form>
     </div>
   );
 };
