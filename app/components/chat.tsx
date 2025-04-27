@@ -68,8 +68,8 @@ const ChatOptions = ({
   // Define default chat options
   const defaultOptions: ChatOption[] = [
     {
-      title: "What is the latest research",
-      description: "on risk factors for PTSD?",
+      title: "What is the biggest risk factor",
+      description: "for PTSD?",
     },
     {
       title: "How is sleep disturbance affected",
@@ -782,7 +782,7 @@ const Chat = ({
       </form>
 
       {/* Chat Messages Area - Takes remaining space and scrolls (order-2 in flex-col-reverse) */}
-      <div className="flex-grow overflow-y-auto flex flex-col order-2 p-2 whitespace-pre-wrap bg-white dark:bg-gray-900">
+      <div className="flex-grow overflow-y-auto flex flex-col order-2 p-2 whitespace-pre-wrap bg-white dark:bg-gray-900 chat-scroll-area">
         {error && (
           <div className="bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-3 mx-4 my-2 rounded-lg z-10 relative">
             <p className="font-medium">Error</p>
