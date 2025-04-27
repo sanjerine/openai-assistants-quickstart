@@ -16,7 +16,7 @@
 @layer base {
   html,
   body {
-    @apply max-w-full h-screen overflow-hidden;
+    @apply max-w-full h-screen overflow-hidden transition-colors duration-200;
   }
 
   body {
@@ -33,22 +33,22 @@
   }
 
   pre {
-    @apply -mx-4 p-5 whitespace-pre-wrap bg-gray-200 text-black;
+    @apply -mx-4 p-5 whitespace-pre-wrap bg-gray-200 dark:bg-gray-800 text-black dark:text-gray-200;
   }
 }
 
 /* Custom component classes */
 @layer components {
   .siteHeader {
-    @apply w-full bg-primary p-6 text-left shadow-md flex-shrink-0;
+    @apply w-full bg-primary dark:bg-gray-900 p-6 text-left shadow-md flex-shrink-0 transition-colors duration-200;
   }
 
   .siteHeader h1 {
-    @apply text-black font-semibold text-2xl m-0;
+    @apply text-black dark:text-white font-semibold text-2xl m-0;
   }
 
   .mainContent {
-    @apply flex-1 overflow-hidden flex flex-col;
+    @apply flex-1 overflow-hidden flex flex-col bg-white dark:bg-gray-900;
   }
 
   .warnings {

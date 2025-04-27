@@ -5,10 +5,12 @@ module.exports = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
         primary: "#ffce11",
+        "primary-dark": "#e6b800",
         dark: "#333",
       },
       fontFamily: {

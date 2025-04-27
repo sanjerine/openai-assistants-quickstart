@@ -6,6 +6,13 @@ import Markdown from "react-markdown";
 // @ts-expect-error - no types for this yet
 import { AssistantStreamEvent } from "openai/resources/beta/assistants/assistants";
 import { RequiredActionFunctionToolCall } from "openai/resources/beta/threads/runs/runs";
+import { useTheme } from "../context/ThemeContext";
+
+// Define chat option type
+type ChatOption = {
+  title: string;
+  description: string;
+};
 
 type MessageProps = {
   role: "user" | "assistant" | "code";
@@ -49,6 +56,48 @@ const getFileNameFromId = (fileId) => {
   return displayName;
 };
 
+// New component for chat options
+const ChatOptions = ({
+  onSelectOption,
+}: {
+  onSelectOption: (text: string) => void;
+}) => {
+  const { theme } = useTheme();
+
+  // Define default chat options
+  const defaultOptions: ChatOption[] = [
+    {
+      title: "What is the latest research",
+      description: "on risk factors for PTSD?",
+    },
+    {
+      title: "How is sleep disturbance affected",
+      description: "by wildfires?",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 mb-4">
+      {defaultOptions.map((option, index) => (
+        <button
+          key={index}
+          onClick={() =>
+            onSelectOption(`${option.title} ${option.description}`)
+          }
+          className="text-left p-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-all duration-200 border border-gray-200 dark:border-gray-700"
+        >
+          <div className="font-medium text-gray-800 dark:text-white">
+            {option.title}
+          </div>
+          <div className="text-gray-600 dark:text-gray-400">
+            {option.description}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const UserMessage = ({ text }: { text: string }) => {
   return (
     <div className="self-end text-dark bg-primary font-medium my-2 p-2 px-4 rounded-2xl max-w-[80%] break-words">
@@ -59,7 +108,7 @@ const UserMessage = ({ text }: { text: string }) => {
 
 const AssistantMessage = ({ text }: { text: string }) => {
   return (
-    <div className="bg-gray-100 text-dark my-2 p-2 px-4 rounded-2xl max-w-[80%] self-start break-words">
+    <div className="bg-gray-100 dark:bg-gray-700 text-dark dark:text-white my-2 p-2 px-4 rounded-2xl max-w-[80%] self-start break-words">
       <Markdown
         components={{
           a: ({ node, ...props }) => {
@@ -83,7 +132,7 @@ const AssistantMessage = ({ text }: { text: string }) => {
                   href={`/files/${fileName}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center p-2 my-2 bg-gray-100 border border-gray-200 rounded-lg text-dark hover:bg-amber-50 hover:border-primary transition-all duration-200 shadow-sm max-w-full"
+                  className="inline-flex items-center p-2 my-2 bg-gray-100 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg text-dark dark:text-white hover:bg-amber-50 dark:hover:bg-gray-500 hover:border-primary transition-all duration-200 shadow-sm max-w-full"
                   title={fileName}
                 >
                   <div className="text-lg mr-2 flex-shrink-0 text-primary">
@@ -96,7 +145,14 @@ const AssistantMessage = ({ text }: { text: string }) => {
               );
             }
             // Regular link
-            return <a {...props} target="_blank" rel="noopener noreferrer" />;
+            return (
+              <a
+                {...props}
+                className="text-primary hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            );
           },
           img: (props) => (
             <img {...props} className="max-w-full my-2 rounded-lg" />
@@ -111,7 +167,7 @@ const AssistantMessage = ({ text }: { text: string }) => {
 
 const CodeMessage = ({ text }: { text: string }) => {
   return (
-    <div className="p-2 px-4 bg-gray-200 counter-reset-[line] text-dark my-2 rounded-2xl max-w-[80%] self-start">
+    <div className="p-2 px-4 bg-gray-200 dark:bg-gray-800 counter-reset-[line] text-dark dark:text-gray-200 my-2 rounded-2xl max-w-[80%] self-start">
       {text.split("\n").map((line, index) => (
         <div key={index} className="mt-1">
           <span className="text-gray-400 mr-2">{`${index + 1}. `}</span>
@@ -144,6 +200,7 @@ type ChatProps = {
 const Chat = ({
   functionCallHandler = () => Promise.resolve(""), // default to return empty string
 }: ChatProps) => {
+  const { theme } = useTheme();
   const [userInput, setUserInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [inputDisabled, setInputDisabled] = useState(false);
@@ -360,42 +417,80 @@ const Chat = ({
     });
   };
 
+  // Handle a chat option selection
+  const handleOptionSelect = (text: string) => {
+    setUserInput(text);
+    // Automatically submit the message after a brief delay to allow the UI to update
+    setTimeout(() => {
+      // Add the user message to the chat
+      setMessages((prev) => [...prev, { role: "user", text }]);
+      // Send the message to the API
+      sendMessage(text);
+      // Clear the input field
+      setUserInput("");
+      // Disable the input field while waiting for a response
+      setInputDisabled(true);
+    }, 100);
+  };
+
   return (
     <div className="flex flex-col-reverse h-full w-full overflow-hidden">
       <form
         onSubmit={handleSubmit}
-        className="flex w-full p-2 pb-5 order-1 bg-white border-t border-gray-200 z-10 flex-shrink-0"
+        className="flex w-full p-2 pb-5 order-1 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-10 flex-shrink-0"
       >
         <input
           type="text"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
           disabled={inputDisabled}
-          placeholder="Type your message..."
-          className="flex-grow py-4 px-6 mr-2 rounded-full border-2 border-transparent focus:outline-none focus:border-primary focus:bg-white bg-gray-100 text-black"
+          placeholder="Send a message..."
+          className="flex-grow py-4 px-6 mr-2 rounded-full border-2 border-transparent focus:outline-none focus:border-primary focus:bg-white dark:focus:bg-gray-800 bg-gray-100 dark:bg-gray-800 text-black dark:text-white"
         />
         <button
           type="submit"
           disabled={inputDisabled}
-          className="py-2 px-6 bg-primary text-dark border-none text-base rounded-full font-semibold hover:bg-amber-500 disabled:bg-gray-300"
+          className="py-2 px-6 bg-primary text-dark border-none text-base rounded-full font-semibold hover:bg-amber-500 disabled:bg-gray-300 dark:disabled:bg-gray-700"
         >
           Send
         </button>
       </form>
-      <div className="flex-grow overflow-y-auto p-2 flex flex-col order-2 whitespace-pre-wrap h-[calc(100%-90px)]">
-        {messages.map((message, index) => (
-          <Message key={index} role={message.role} text={message.text} />
-        ))}
-        {isLoading && (
-          <div className="flex justify-start my-3 p-2 px-4 bg-gray-100 rounded-2xl max-w-[80%] self-start">
-            <div className="flex items-center">
-              <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out_-0.32s]"></span>
-              <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out_-0.16s]"></span>
-              <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out]"></span>
+      <div className="flex-grow overflow-y-auto flex flex-col order-2 whitespace-pre-wrap h-[calc(100%-90px)] bg-white dark:bg-gray-900">
+        {messages.length === 0 && (
+          <div className="flex flex-col h-full">
+            <div className="mt-auto p-4 pb-6">
+              <div className="mb-8 px-4">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                  Hello there!
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  This is a Proof of Concept RAG chatbot, trained on Mental
+                  Health-related research by the NHRA. Try asking it anything
+                  about{" "}
+                  <span className="text-gray-600 dark:text-gray-400 font-bold">
+                    Mental Health Research!
+                  </span>
+                </p>
+              </div>
+              <ChatOptions onSelectOption={handleOptionSelect} />
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
+        <div className="p-2 flex flex-col">
+          {messages.map((message, index) => (
+            <Message key={index} role={message.role} text={message.text} />
+          ))}
+          {isLoading && (
+            <div className="flex justify-start my-3 p-2 px-4 bg-gray-100 dark:bg-gray-700 rounded-2xl max-w-[80%] self-start">
+              <div className="flex items-center">
+                <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out_-0.32s]"></span>
+                <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out_-0.16s]"></span>
+                <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out]"></span>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
     </div>
   );
