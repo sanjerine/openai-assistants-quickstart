@@ -7,6 +7,7 @@ import Markdown from "react-markdown";
 import { AssistantStreamEvent } from "openai/resources/beta/assistants/assistants";
 import { RequiredActionFunctionToolCall } from "openai/resources/beta/threads/runs/runs";
 import { useTheme } from "../context/ThemeContext";
+import { useChatContext } from "../context/ChatContext"; // Import the context hook
 
 // Define chat option type
 type ChatOption = {
@@ -173,7 +174,7 @@ const DocumentCard = ({ fileId, fileName, referenceNumber }) => {
             >
               <path
                 fillRule="evenodd"
-                d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm8 8v-1h-2v1h2zm0-3v-1h-2v1h2zm-8 3v-1H5v1h2zm0-3v-1H5v1h2zm8-3V5h-2v2h2zm-8 0V5H5v2h2z"
+                d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm8 8v-1h-2v1h2zm0-3v-1h-2v1h2zm-8 3v-1H5v1h2zm0-3v-1H5v1h2z"
                 clipRule="evenodd"
               />
             </svg>
@@ -222,6 +223,7 @@ const AssistantMessage = ({ text }: { text: string }) => {
       const linkRegex = /\[([^\]]+)\]\(\/api\/files\/([^)]+)\)/g;
       const docs = [];
       const fileIds = new Set(); // To track unique file IDs
+      const fileIdToIndex = new Map(); // Map file IDs to their index in docs array
       let match;
 
       // First pass: collect all unique documents
@@ -237,19 +239,22 @@ const AssistantMessage = ({ text }: { text: string }) => {
             fileId,
             originalText: match[0],
           });
+          fileIdToIndex.set(fileId, docs.length - 1); // Store index for this file ID
         }
       }
 
       // Set the deduplicated documents
       setDocuments(docs);
 
-      // Second pass: replace document links with reference numbers
+      // Second pass: replace document links with simple numbered references
       let processedText = text;
+      const processedLinks = new Set(); // Track already processed links to avoid duplicates
+
       docs.forEach((doc, index) => {
         // Create a reference number for this document
         const refNumber = index + 1;
 
-        // Replace all occurrences of this document link with the reference number
+        // Replace all occurrences of this document link with a simple reference number
         const docRegex = new RegExp(
           "\\[" +
             doc.fileName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
@@ -258,17 +263,22 @@ const AssistantMessage = ({ text }: { text: string }) => {
             "\\)",
           "g"
         );
-        processedText = processedText.replace(
-          docRegex,
-          `[${doc.fileName} [${refNumber}]](/api/files/${doc.fileId})`
-        );
+
+        // Use a marker that won't be in the text to avoid nested replacements
+        const marker = `__REF_${refNumber}__`;
+        processedText = processedText.replace(docRegex, marker);
       });
 
-      // Simple reference format that doesn't break formatting
-      processedText = processedText.replace(
-        /\[([^\]]+) \[(\d+)\]\]\(\/api\/files\/([^)]+)\)/g,
-        "$1 [*$2*](/files/$3)"
-      );
+      // Replace all markers with the properly formatted reference numbers
+      for (let i = 1; i <= docs.length; i++) {
+        const marker = `__REF_${i}__`;
+        // Use a simple bold number format that Markdown will process
+        // Add spaces before and after to ensure proper separation from surrounding text
+        processedText = processedText.replace(
+          new RegExp(marker, "g"),
+          ` **[${i}]** `
+        );
+      }
 
       setProcessedText(processedText);
     };
@@ -276,111 +286,82 @@ const AssistantMessage = ({ text }: { text: string }) => {
     extractDocuments();
   }, [text]);
 
-  // Custom HTML rendering - just going to use HTML directly because the Markdown component
-  // is not handling the numbered lists correctly
-  const convertToHtml = (text) => {
-    // Custom handling for the specific case of numbered lists with headings that we've seen in the screenshot
-
-    // Direct manipulation for ordered lists with bold subheadings
-    let htmlContent = text;
-
-    // Handle links first to prevent interference with other processing
-    htmlContent = htmlContent.replace(
-      /\[\*(\d+)\*\]\(\/files\/([^)]+)\)/g,
-      (match, num, fileId) =>
-        `<a href="/files/${fileId}" target="_blank" class="font-medium text-inherit">[${num}]</a>`
-    );
-
-    // Convert all Markdown bold to HTML bold
-    htmlContent = htmlContent.replace(
-      /\*\*([^*]+)\*\*/g,
-      "<strong>$1</strong>"
-    );
-
-    // Get list items - use an approach that works with older JavaScript
-    const lines = htmlContent.split("\n");
-    let result = [];
-    let currentItem = null;
-    let itemContent = "";
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const listItemMatch = line.match(
-        /^(\d+)\.\s+(?:<strong>|)([^:<]*?)(?:<\/strong>|):(.*)/
-      );
-
-      if (listItemMatch) {
-        // If we had a previous item, push it to the result
-        if (currentItem) {
-          result.push(`
-          <div class="flex items-start space-x-2 my-3">
-            <div class="mt-1 font-medium">${currentItem.number}.</div>
-            <div class="flex-1">
-              <div class="font-semibold">${currentItem.heading}:</div>
-              <div>${itemContent}</div>
-            </div>
-          </div>`);
-        }
-
-        // Start a new item
-        currentItem = {
-          number: listItemMatch[1],
-          heading: listItemMatch[2],
-        };
-        itemContent = listItemMatch[3] || "";
-      } else if (currentItem) {
-        // Continue with the current item content
-        itemContent += "\n" + line;
-      } else if (line.trim()) {
-        // Regular paragraph
-        result.push(`<p class="mb-4">${line}</p>`);
-      }
-    }
-
-    // Don't forget to add the last item
-    if (currentItem) {
-      result.push(`
-      <div class="flex items-start space-x-2 my-3">
-        <div class="mt-1 font-medium">${currentItem.number}.</div>
-        <div class="flex-1">
-          <div class="font-semibold">${currentItem.heading}:</div>
-          <div>${itemContent}</div>
-        </div>
-      </div>`);
-    }
-
-    return result.join("");
-  };
-
   return (
     <div className="bg-gray-100 dark:bg-gray-700 text-dark dark:text-white my-2 p-2 px-4 rounded-2xl max-w-[80%] self-start break-words">
-      {documents.length > 0 ? (
-        <div>
-          <div
-            dangerouslySetInnerHTML={{ __html: convertToHtml(processedText) }}
-          />
-          <DocumentGroup documents={documents} />
-        </div>
-      ) : (
-        <Markdown
-          components={{
-            a: ({ node, ...props }) => (
-              <a
-                {...props}
-                className="text-primary hover:underline"
-                target="_blank"
-                rel="noopener noreferrer"
-              />
-            ),
-            img: (props) => (
-              <img {...props} className="max-w-full my-2 rounded-lg" />
-            ),
-            p: ({ children }) => <p className="mb-4">{children}</p>,
-          }}
-        >
-          {processedText}
-        </Markdown>
-      )}
+      <Markdown
+        components={{
+          a: ({ node, ...props }) => (
+            <a
+              {...props}
+              className="text-primary hover:underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          ),
+          img: (props) => (
+            <img {...props} className="max-w-full my-2 rounded-lg" />
+          ),
+          p: ({ children }) => <p className="mb-4">{children}</p>,
+          h1: ({ children }) => (
+            <h1 className="text-xl font-bold mb-4">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-lg font-bold mb-3">{children}</h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-md font-bold mb-2">{children}</h3>
+          ),
+          ul: ({ children }) => (
+            <ul className="list-disc pl-6 mb-4 space-y-2">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal pl-10 mb-4 space-y-3">{children}</ol>
+          ),
+          li: ({ children }) => {
+            return (
+              <li className="mb-2">
+                <div className="flex">
+                  <div className="flex-1">{children}</div>
+                </div>
+              </li>
+            );
+          },
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic my-4">
+              {children}
+            </blockquote>
+          ),
+          code: ({ children }) => (
+            <code className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded">
+              {children}
+            </code>
+          ),
+          pre: ({ children }) => (
+            <pre className="bg-gray-200 dark:bg-gray-800 p-3 rounded-md overflow-x-auto mb-4">
+              {children}
+            </pre>
+          ),
+          strong: ({ children }) => {
+            // Check if this is a reference number link (format: [n])
+            const isReference =
+              typeof children === "string" && /^\[\d+\]$/.test(children);
+
+            if (isReference) {
+              return (
+                <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold bg-primary text-dark rounded-full mx-1">
+                  {children}
+                </span>
+              );
+            }
+
+            return <strong>{children}</strong>;
+          },
+        }}
+      >
+        {processedText}
+      </Markdown>
+
+      {documents.length > 0 && <DocumentGroup documents={documents} />}
     </div>
   );
 };
@@ -421,6 +402,7 @@ const Chat = ({
   functionCallHandler = () => Promise.resolve(""), // default to return empty string
 }: ChatProps) => {
   const { theme } = useTheme();
+  const { resetKey } = useChatContext(); // Get resetKey from context
   const [userInput, setUserInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [inputDisabled, setInputDisabled] = useState(false);
@@ -464,6 +446,15 @@ const Chat = ({
     };
     createThread();
   }, []);
+
+  // Effect to reset chat when resetKey changes (from context)
+  useEffect(() => {
+    // Avoid running on initial mount (resetKey starts at 0)
+    if (resetKey > 0) {
+      console.log(`Reset key changed to ${resetKey}, triggering chat reset.`); // Log for debugging
+      handleNewChat();
+    }
+  }, [resetKey]); // Depend on resetKey
 
   const sendMessage = async (text) => {
     setIsLoading(true);
@@ -722,8 +713,53 @@ const Chat = ({
     }, 100);
   };
 
+  const createNewThread = async () => {
+    setIsLoading(true); // Indicate loading during thread creation
+    setError(null);
+    try {
+      const res = await fetch(`/api/assistants/threads`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(
+          `Failed to create thread: ${res.status} ${res.statusText}. ${errorText}`
+        );
+      }
+      const data = await res.json();
+      setThreadId(data.threadId);
+      console.log("Created new thread:", data.threadId); // Optional: log new thread ID
+      return data.threadId; // Return the new thread ID
+    } catch (error) {
+      console.error("Error creating thread:", error);
+      setError(
+        `Failed to start a new chat. Please refresh the page. (${error.message})`
+      );
+      return null; // Indicate failure
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial thread creation
+  useEffect(() => {
+    createNewThread();
+    // The empty dependency array ensures this effect runs only once on mount
+  }, []);
+
+  const handleNewChat = async () => {
+    setUserInput("");
+    setMessages([]);
+    setError(null);
+    setInputDisabled(false); // Ensure input is enabled
+    setIsLoading(true); // Show loading while new thread is created
+    await createNewThread(); // Create a new thread and update the state
+    // isLoading will be set to false inside createNewThread
+  };
+
   return (
     <div className="flex flex-col-reverse h-full w-full overflow-hidden">
+      {/* Input Form - Stays at the bottom (order-1 in flex-col-reverse) */}
       <form
         onSubmit={handleSubmit}
         className="flex w-full p-2 pb-5 order-1 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-10 flex-shrink-0"
@@ -744,9 +780,11 @@ const Chat = ({
           Send
         </button>
       </form>
-      <div className="flex-grow overflow-y-auto flex flex-col order-2 whitespace-pre-wrap h-[calc(100%-90px)] bg-white dark:bg-gray-900">
+
+      {/* Chat Messages Area - Takes remaining space and scrolls (order-2 in flex-col-reverse) */}
+      <div className="flex-grow overflow-y-auto flex flex-col order-2 p-2 whitespace-pre-wrap bg-white dark:bg-gray-900">
         {error && (
-          <div className="bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-3 mx-4 my-2 rounded-lg">
+          <div className="bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-3 mx-4 my-2 rounded-lg z-10 relative">
             <p className="font-medium">Error</p>
             <p className="text-sm">{error}</p>
           </div>
@@ -771,21 +809,19 @@ const Chat = ({
             </div>
           </div>
         )}
-        <div className="p-2 flex flex-col">
-          {messages.map((message, index) => (
-            <Message key={index} role={message.role} text={message.text} />
-          ))}
-          {isLoading && (
-            <div className="flex justify-start my-3 p-2 px-4 bg-gray-100 dark:bg-gray-700 rounded-2xl max-w-[80%] self-start">
-              <div className="flex items-center">
-                <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out_-0.32s]"></span>
-                <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out_-0.16s]"></span>
-                <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out]"></span>
-              </div>
+        {messages.map((message, index) => (
+          <Message key={index} role={message.role} text={message.text} />
+        ))}
+        {isLoading && (
+          <div className="flex justify-start my-3 p-2 px-4 bg-gray-100 dark:bg-gray-700 rounded-2xl max-w-[80%] self-start">
+            <div className="flex items-center">
+              <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out_-0.32s]"></span>
+              <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out_-0.16s]"></span>
+              <span className="w-2 h-2 mx-1 bg-primary rounded-full inline-block animate-[bounce_1.4s_infinite_ease-in-out]"></span>
             </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
     </div>
   );

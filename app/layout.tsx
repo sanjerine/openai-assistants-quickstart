@@ -4,6 +4,8 @@ import Warnings from "./components/warnings";
 import { assistantId } from "./assistant-config";
 import { ThemeProvider } from "./context/ThemeContext";
 import ThemeToggle from "./components/ThemeToggle";
+import { ChatProvider } from "./context/ChatContext";
+import NewChatButton from "./components/NewChatButton";
 
 const titilliumWeb = Titillium_Web({
   weight: ["200", "300", "400", "600", "700", "900"],
@@ -24,15 +26,20 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={titilliumWeb.className}>
         <ThemeProvider>
-          <header className="siteHeader">
-            <div className="max-w-[900px] mx-auto flex justify-between items-center">
-              <h1>Natural Hazards Research Australia</h1>
-              <ThemeToggle />
-            </div>
-          </header>
-          <main className="mainContent">
-            {assistantId ? children : <Warnings />}
-          </main>
+          <ChatProvider>
+            <header className="siteHeader">
+              <div className="max-w-[900px] mx-auto flex justify-between items-center">
+                <h1>Natural Hazards Research Australia</h1>
+                <div className="flex items-center space-x-2">
+                  <NewChatButton />
+                  <ThemeToggle />
+                </div>
+              </div>
+            </header>
+            <main className="mainContent">
+              {assistantId ? children : <Warnings />}
+            </main>
+          </ChatProvider>
         </ThemeProvider>
       </body>
     </html>
