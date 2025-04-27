@@ -68,6 +68,12 @@ const AssistantMessage = ({ text }: { text: string }) => {
               // Get the proper filename from our mapping
               const fileName = getFileNameFromId(fileId);
 
+              // Create a shorter display name if needed
+              const displayName =
+                fileName.length > 40
+                  ? fileName.substring(0, 37) + "..."
+                  : fileName;
+
               // Redirect to the public directory instead of API endpoint
               return (
                 <a
@@ -75,8 +81,10 @@ const AssistantMessage = ({ text }: { text: string }) => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.fileDownloadLink}
+                  title={fileName}
                 >
-                  📄 {fileName}
+                  <div className={styles.fileIcon}>📄</div>
+                  <div className={styles.fileName}>{displayName}</div>
                 </a>
               );
             }
