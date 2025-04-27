@@ -40,7 +40,7 @@
 /* Custom component classes */
 @layer components {
   .siteHeader {
-    @apply w-full bg-primary p-6 text-center shadow-md flex-shrink-0;
+    @apply w-full bg-primary p-6 text-left shadow-md flex-shrink-0;
   }
 
   .siteHeader h1 {

@@ -22,10 +22,12 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={titilliumWeb.className}>
         <header className="siteHeader">
-          <h1>Natural Hazards Research Australia</h1>
+          <div className="max-w-[900px] mx-auto">
+            <h1>Natural Hazards Research Australia</h1>
+          </div>
         </header>
         <main className="mainContent">
-          {assistantId ? children : <Warnings />}
+          i{assistantId ? children : <Warnings />}
         </main>
       </body>
     </html>
