@@ -3,14 +3,19 @@
   flex-direction: column-reverse;
   height: 100%;
   width: 100%;
+  overflow: hidden;
 }
 
 .inputForm {
   display: flex;
   width: 100%;
   padding: 10px;
-  padding-bottom: 40px;
+  padding-bottom: 20px;
   order: 1;
+  background-color: white;
+  border-top: 1px solid #ececec;
+  z-index: 10;
+  flex-shrink: 0;
 }
 
 .input {
@@ -25,17 +30,22 @@
 
 .input:focus {
   outline: none !important;
-  border-color: #000;
+  border-color: #ffce11;
   background-color: white;
 }
 
 .button {
   padding: 8px 24px;
-  background-color: #000;
-  color: white;
+  background-color: #ffce11;
+  color: #333;
   border: none;
   font-size: 1em;
-  border-radius: 60px; /* Removed duplicate border-radius property */
+  border-radius: 60px;
+  font-weight: 600;
+}
+
+.button:hover {
+  background-color: #e5b800;
 }
 
 .button:disabled {
@@ -50,6 +60,7 @@
   flex-direction: column;
   order: 2;
   white-space: pre-wrap;
+  height: calc(100% - 90px); /* Adjust based on input form height */
 }
 
 .userMessage,
@@ -71,19 +82,21 @@
 
 .userMessage {
   align-self: flex-end;
-  color: #fff;
-  background-color: #000;
+  color: #333;
+  background-color: #ffce11;
+  font-weight: 500;
 }
 
 .assistantMessage {
   background-color: #efefef;
+  color: #333;
 }
 
 .codeMessage {
   padding: 10px 16px;
   background-color: #e9e9e9;
-  font-family: monospace;
   counter-reset: line;
+  color: #333;
 }
 
 .codeMessage > div {
@@ -115,7 +128,7 @@
   width: 8px;
   height: 8px;
   margin: 0 3px;
-  background-color: #666;
+  background-color: #ffce11;
   border-radius: 50%;
   display: inline-block;
   animation: bounce 1.4s infinite ease-in-out both;
@@ -157,8 +170,8 @@
 }
 
 .fileDownloadLink:hover {
-  background-color: #eef5ff;
-  border-color: #c0d6f9;
+  background-color: #fff7d9;
+  border-color: #ffce11;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
@@ -166,6 +179,7 @@
   font-size: 1.2em;
   margin-right: 10px;
   flex-shrink: 0;
+  color: #ffce11;
 }
 
 .fileName {

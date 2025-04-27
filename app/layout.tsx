@@ -1,23 +1,32 @@
-import { Inter } from "next/font/google";
+import { Titillium_Web } from "next/font/google";
 import "./globals.css";
 import Warnings from "./components/warnings";
 import { assistantId } from "./assistant-config";
-const inter = Inter({ subsets: ["latin"] });
+
+const titilliumWeb = Titillium_Web({
+  weight: ["200", "300", "400", "600", "700", "900"],
+  subsets: ["latin"],
+});
 
 export const metadata = {
-  title: "Assistants API Quickstart",
-  description: "A quickstart template using the Assistants API with OpenAI",
+  title: "Natural Hazards Research Australia",
+  description:
+    "A conversational assistant for Natural Hazards Research Australia",
   icons: {
-    icon: "/openai.svg",
+    icon: "/favicon.png",
   },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        {assistantId ? children : <Warnings />}
-        <img className="logo" src="/openai.svg" alt="OpenAI Logo" />
+      <body className={titilliumWeb.className}>
+        <header className="siteHeader">
+          <h1>Natural Hazards Research Australia</h1>
+        </header>
+        <main className="mainContent">
+          {assistantId ? children : <Warnings />}
+        </main>
       </body>
     </html>
   );
