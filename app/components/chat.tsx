@@ -13,6 +13,43 @@ type MessageProps = {
   text: string;
 };
 
+// File ID to filename mapping function - moved outside components
+const getFileNameFromId = (fileId) => {
+  // Step 1: Create a mapping from full file IDs to actual filenames
+  const fileMapping = {
+    // Full OpenAI file IDs mapped to your actual filenames
+    "file-1gZajGdmDZ14us5CohD1uU":
+      "Prevalence and Predictors of Sleep and Trauma Symptoms in Wildfire Survivors_Fadia Isaac.pdf",
+    "file-N1iL7bCmaKmLYEk84MaXRp":
+      "A Systematic Review of the Impact of Wildfires on Sleep Disturbances.pdf",
+    "file-PH7yB4WVSkLHyRwDPDxa6u":
+      "Assessment of the Effectiveness_Fadia Isaac.pdf",
+    "file-TyF8sXRuvbaSddDp35ebgu":
+      "Differences in Anxiety, Insomnia, and Trauma Symptoms in Wildfire Survivors from Aus, Canada and USA.pdf",
+    "file-518AMr5rugyLouPUqKgPoJ":
+      "Pre-existing depression, anxiety and trauma as risk factors for the development of post-traumatic stress disorder symptoms following wildfires.pdf",
+    "file-NyXyh8TewLEgj737Lq4KHY":
+      "Cognitive behavioural therapy-based treatments for insomnia and nightmares in adults with trauma symptoms - a systematic review.pdf",
+    // Add more mappings as needed
+  };
+
+  // Step 2: Check if we have a direct mapping for the full file ID
+  if (fileMapping[fileId]) {
+    return fileMapping[fileId];
+  }
+
+  // Step 3: If no direct mapping, try to extract a meaningful name
+  // Remove any emoji or text prefixes if present (like "📄 ")
+  let displayName = fileId.replace(/^📄\s+/, "");
+
+  // Make sure we have a file extension
+  if (!displayName.includes(".")) {
+    displayName = `${displayName}.pdf`;
+  }
+
+  return displayName;
+};
+
 const UserMessage = ({ text }: { text: string }) => {
   return <div className={styles.userMessage}>{text}</div>;
 };
@@ -20,7 +57,36 @@ const UserMessage = ({ text }: { text: string }) => {
 const AssistantMessage = ({ text }: { text: string }) => {
   return (
     <div className={styles.assistantMessage}>
-      <Markdown>{text}</Markdown>
+      <Markdown
+        components={{
+          a: ({ node, ...props }) => {
+            // Check if this is a file download link (from our API)
+            if (props.href && props.href.startsWith("/api/files/")) {
+              // Extract the file ID from the URL
+              const fileId = props.href.split("/").pop();
+
+              // Get the proper filename from our mapping
+              const fileName = getFileNameFromId(fileId);
+
+              // Redirect to the public directory instead of API endpoint
+              return (
+                <a
+                  href={`/files/${fileName}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.fileDownloadLink}
+                >
+                  📄 {fileName}
+                </a>
+              );
+            }
+            // Regular link
+            return <a {...props} target="_blank" rel="noopener noreferrer" />;
+          },
+        }}
+      >
+        {text}
+      </Markdown>
     </div>
   );
 };
@@ -244,14 +310,34 @@ const Chat = ({
       const updatedLastMessage = {
         ...lastMessage,
       };
+
       annotations.forEach((annotation) => {
         if (annotation.type === "file_path") {
+          // Get the raw file ID
+          const fileId = annotation.file_path.file_id;
+
+          // Get the friendly filename from our mapping
+          const fileName = getFileNameFromId(fileId);
+
+          // Create a clickable link with the friendly name but keep the original ID in the href
+          const downloadLink = `[${fileName}](/api/files/${fileId})`;
           updatedLastMessage.text = updatedLastMessage.text.replaceAll(
             annotation.text,
-            `/api/files/${annotation.file_path.file_id}`
+            downloadLink
+          );
+        } else if (annotation.type === "file_citation") {
+          // Handle file citations
+          const fileId = annotation.file_citation.file_id;
+          const fileName = getFileNameFromId(fileId);
+
+          const citation = `[${fileName}](/api/files/${fileId})`;
+          updatedLastMessage.text = updatedLastMessage.text.replaceAll(
+            annotation.text,
+            citation
           );
         }
       });
+
       return [...prevMessages.slice(0, -1), updatedLastMessage];
     });
   };
